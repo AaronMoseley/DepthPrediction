@@ -1,4 +1,4 @@
-data_raw/*
+data_raw/
 DepthPredictionTrainingSetup.txt
-CleaningScripts/*
-data_clean/*
+CleaningScripts/
+data/
