@@ -18,5 +18,8 @@ class ArgumentManager:
         
         return self.__dict__[name]
     
+    def __contains__(self, item:str) -> bool:
+        return item in self.__dict__
+    
     def GetFileName(self) -> str:
         return self.fileName
