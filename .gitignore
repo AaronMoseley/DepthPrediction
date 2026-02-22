@@ -4,3 +4,4 @@ CleaningScripts/
 data/
 *.pyc
 .vscode/
+*__pycache__

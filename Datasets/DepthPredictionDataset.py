@@ -6,7 +6,7 @@ import os
 import random
 
 class DepthPredictionDataset(Dataset):
-    def __init__(self, device:torch.device, datasetName:str, indices:list[int]=None) -> None:
+    def __init__(self, device:torch.device, datasetName:str, indices:list[int]=None, scaleFactor:float=1.0) -> None:
         super().__init__()
 
         random.seed(12345)
@@ -18,6 +18,8 @@ class DepthPredictionDataset(Dataset):
 
         self.depthPath = os.path.join(self.directoryPath, "depth")
         self.rgbPath = os.path.join(self.directoryPath, "rgb")
+
+        self.scaleFactor = scaleFactor
 
         self.depthFiles = os.listdir(self.depthPath)
         self.rgbFiles = os.listdir(self.rgbPath)
@@ -34,19 +36,20 @@ class DepthPredictionDataset(Dataset):
 
     def __getitem__(self, index:int) -> tuple[torch.Tensor, torch.Tensor]:
         rgbFileName = self.rgbFiles[self.indices[index]]
-        rgbTensor = self.CreateDataTensor(os.path.join(self.rgbPath, rgbFileName), torchvision.io.ImageReadMode.RGB)
-        #rgbTensor = torch.unsqueeze(rgbTensor, dim=0)
+        rgbTensor = self.CreateDataTensor(os.path.join(self.rgbPath, rgbFileName), torchvision.io.ImageReadMode.RGB, 255.0)
 
         depthFileName = self.depthFiles[self.indices[index]]
-        depthTensor = self.CreateDataTensor(os.path.join(self.depthPath, depthFileName), torchvision.io.ImageReadMode.UNCHANGED)
-        #depthTensor = torch.unsqueeze(depthTensor, dim=0)
+        depthTensor = self.CreateDataTensor(os.path.join(self.depthPath, depthFileName), torchvision.io.ImageReadMode.UNCHANGED, self.scaleFactor)
 
-        return rgbTensor, depthTensor
+        validDataMask = torch.zeros_like(depthTensor)
+        validDataMask[depthTensor >= 0.01] = 1
 
-    def CreateDataTensor(self, filePath:str, readMode:torchvision.io.ImageReadMode) -> torch.Tensor:
+        return rgbTensor, depthTensor, validDataMask
+
+    def CreateDataTensor(self, filePath:str, readMode:torchvision.io.ImageReadMode, scaleFactor:float=1.0) -> torch.Tensor:
         resultTensor = torchvision.io.read_image(filePath, readMode).to(self.device).float()
 
-        resultTensor /= 255.0
+        resultTensor /= scaleFactor
 
         return resultTensor
 

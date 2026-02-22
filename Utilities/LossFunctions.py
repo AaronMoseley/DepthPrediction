@@ -1,6 +1,12 @@
 import torch
 
-def ScaleInvariantLoss(outputTensor:torch.Tensor, groundTruthTensor:torch.Tensor) -> torch.Tensor:
+def ScaleInvariantLoss(outputTensor:torch.Tensor, groundTruthTensor:torch.Tensor, validMask:torch.Tensor) -> torch.Tensor:
+    groundTruthTensor = groundTruthTensor.clone()
+    outputTensor = outputTensor.clone()
+    
+    groundTruthTensor[validMask < 0.01] = 0
+    outputTensor[validMask < 0.01] = 0
+    
     logGroundTruth = torch.log(groundTruthTensor)
 
     alpha = logGroundTruth - outputTensor

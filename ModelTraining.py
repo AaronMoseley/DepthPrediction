@@ -32,14 +32,14 @@ def TrainModel(model:torch.nn.Module, lossFunction, trainingDataset:Dataset, val
         #loss = 0 for recording per-epoch loss
         trainingLoss = 0.0
         #loop through training batches
-        for batchIndex, (inputTensor, gtTensor) in tqdm(enumerate(trainingLoader)):
+        for batchIndex, (inputTensor, gtTensor, validMask) in tqdm(enumerate(trainingLoader)):
             optimizer.zero_grad()
             
             #get output
             outputTensor = model(inputTensor)
 
             #get loss
-            loss:torch.Tensor = lossFunction(outputTensor, gtTensor)
+            loss:torch.Tensor = lossFunction(outputTensor, gtTensor, validMask)
 
             #apply loss
             loss.backward()
@@ -76,18 +76,28 @@ def TrainModel(model:torch.nn.Module, lossFunction, trainingDataset:Dataset, val
 if __name__ == "__main__":
     print("training model")
 
+    scaleFactors = {
+        "KITTI": 256.0,
+        "NYU": 1.0,
+        "MegaDepth": 1.0
+    }
+
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     argManager = ArgumentManager(sys.argv)
 
-    trainingDataset = DepthPredictionDataset(device, argManager.dataset)
+    scaleFactor = 1.0
+    if argManager.dataset in scaleFactors:
+        scaleFactor = scaleFactors[argManager.dataset]
+
+    trainingDataset = DepthPredictionDataset(device, argManager.dataset, scaleFactor=scaleFactor)
 
     validationSetSize = int(len(trainingDataset) * 0.1)
     if "validationSetRatio" in argManager:
         validationSetSize = int(len(trainingDataset) * argManager.validationSetRatio)
 
     validationDatasetIndices = trainingDataset.PartitionValidationSet(validationSetSize)
-    validationDataset = DepthPredictionDataset(device, argManager.dataset, validationDatasetIndices)
+    validationDataset = DepthPredictionDataset(device, argManager.dataset, validationDatasetIndices, scaleFactor=scaleFactor)
 
     model = DepthPredictionModel().to(device)
 
