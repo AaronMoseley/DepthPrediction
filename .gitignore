@@ -2,3 +2,5 @@ data_raw/
 DepthPredictionTrainingSetup.txt
 CleaningScripts/
 data/
+*.pyc
+.vscode/

@@ -7,7 +7,7 @@ class DepthPredictionModel(torch.nn.Module):
 
         self.coarseBranch = CoarseBranch(3, torch.nn.Sigmoid())
         self.fineBranch = FineBranch(3, torch.nn.Sigmoid())
-        self.decoder = Decoder(64, torch.nn.Sigmoid())
+        self.decoder = Decoder(64, torch.nn.ReLU())
 
     def forward(self, inputTensor:torch.Tensor) -> torch.Tensor:
         coarseOutput = self.coarseBranch(inputTensor)
@@ -58,12 +58,7 @@ class FineBranch(torch.nn.Module):
     def forward(self, inputTensor:torch.Tensor, coarseOutput:torch.Tensor) -> torch.Tensor:
         out1 = self.block1(inputTensor)
 
-        differenceH = out1.shape[2] - coarseOutput.shape[2]
-        differenceV = out1.shape[3] - coarseOutput.shape[3]
-
-        paddedCoarseOutput = torch.nn.functional.pad(coarseOutput, (differenceH // 2, math.ceil(differenceH / 2), differenceV // 2, math.ceil(differenceV / 2)), mode="replicate")
-
-        concatInput = torch.concat((out1, paddedCoarseOutput), dim=1)
+        concatInput = torch.concat((out1, coarseOutput), dim=1)
 
         out2 = self.block2(concatInput)
         result = self.block3(out2)
