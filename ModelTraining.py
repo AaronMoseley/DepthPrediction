@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
+from Models.BasicDepthPredictionModel import DepthPredictionModel
 
 def TrainModel(model:torch.nn.Module, lossFunction, trainingDataset:Dataset, validationDataset:Dataset) -> None:
     pass
@@ -23,3 +24,11 @@ if __name__ == "__main__":
 
     validationDatasetIndices = trainingDataset.PartitionValidationSet(validationSetSize)
     validationDataset = DepthPredictionDataset(device, argManager.dataset, validationDatasetIndices)
+
+    model = DepthPredictionModel().to(device)
+
+    inputTensor, gtTensor = trainingDataset[0]
+    output = model(inputTensor)
+
+    print(output.shape)
+    print(inputTensor.shape)

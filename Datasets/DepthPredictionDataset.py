@@ -35,9 +35,11 @@ class DepthPredictionDataset(Dataset):
     def __getitem__(self, index:int) -> tuple[torch.Tensor, torch.Tensor]:
         rgbFileName = self.rgbFiles[self.indices[index]]
         rgbTensor = self.CreateDataTensor(os.path.join(self.rgbPath, rgbFileName), torchvision.io.ImageReadMode.RGB)
+        rgbTensor = torch.unsqueeze(rgbTensor, dim=0)
 
         depthFileName = self.depthFiles[self.indices[index]]
         depthTensor = self.CreateDataTensor(os.path.join(self.depthPath, depthFileName), torchvision.io.ImageReadMode.UNCHANGED)
+        depthTensor = torch.unsqueeze(depthTensor, dim=0)
 
         return rgbTensor, depthTensor
 
