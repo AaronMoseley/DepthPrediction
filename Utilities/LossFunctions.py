@@ -11,7 +11,7 @@ def ScaleInvariantLoss(outputTensor:torch.Tensor, groundTruthTensor:torch.Tensor
 
     alpha = logGroundTruth - outputTensor
     alpha = torch.mean(alpha, (1, 2, 3))
-    alpha = alpha.view(1, 3, 1, 1)
+    alpha = alpha.view(groundTruthTensor.shape[0], 1, 1, 1)
 
     difference = outputTensor - logGroundTruth
     difference = difference + alpha
