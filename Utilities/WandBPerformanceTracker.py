@@ -17,7 +17,8 @@ class WeightsAndBiasesLogger(PerformanceLogger):
         self.run = wandb.init(
             entity="amoseley018",
             project=projectName,
-            config=runConfig
+            config=runConfig,
+            runName=runName
         )
 
     def LogData(self, data:dict, step:int=None) -> None:
