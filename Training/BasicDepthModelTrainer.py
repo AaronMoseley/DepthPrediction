@@ -4,7 +4,7 @@ from Training.Trainer import Trainer, TrainerInitializationData, CallbackInterva
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
 from Models.BasicDepthPredictionModel import DepthPredictionModel
 from Utilities.LossFunctions import ScaleInvariantLoss
-from Utilities.WandBPerformanceTracker import WeightsAndBiasesTracker
+from Utilities.WandBPerformanceTracker import WeightsAndBiasesLogger
 
 DATASET_SCALE_FACTORS = {
         "KITTI": 256.0,
@@ -46,7 +46,7 @@ class BasicDepthModelTrainer(Trainer):
 
         super().__init__(initializationData)
 
-        self.logger = WeightsAndBiasesTracker("Depth Prediction", runName, {
+        self.logger = WeightsAndBiasesLogger("Depth Prediction", runName, {
             "batchSize": self.batchSize,
             "learnRate": self.learnRate,
             "epochs": self.epochs,

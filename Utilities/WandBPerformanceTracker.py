@@ -2,7 +2,9 @@ import wandb
 import torch
 import numpy as np
 
-class WeightsAndBiasesTracker():
+from Utilities.PerformanceLogger import PerformanceLogger
+
+class WeightsAndBiasesLogger(PerformanceLogger):
     def __init__(self, projectName:str, runName:str, configData:dict) -> None:
         self.projectName = projectName
         self.runName = runName
