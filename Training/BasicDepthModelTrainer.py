@@ -57,8 +57,11 @@ class BasicDepthModelTrainer(Trainer):
             "dataset": datasetName
         })
 
+        self.validationIntervalType = CallbackIntervalType.EVERY_N_ITERATIONS
+        self.validationInterval = 5000
+
         self.AddCallback(self.LogEpochLoss, intervalType=CallbackIntervalType.EVERY_N_EPOCHS, interval=1)
-        self.AddCallback(self.SaveModelCheckpoint, intervalType=CallbackIntervalType.EVERY_N_ITERATIONS, interval=20)
+        self.AddCallback(self.SaveModelCheckpoint, intervalType=CallbackIntervalType.EVERY_N_EPOCHS, interval=1)
 
     def TrainingStep(self, inputData:tuple) -> torch.Tensor:
         inputTensor, gtTensor, validMask = inputData
