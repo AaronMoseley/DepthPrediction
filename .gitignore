@@ -5,3 +5,4 @@ data/
 *.pyc
 .vscode/
 *__pycache__
+wandb/
