@@ -18,7 +18,7 @@ class WeightsAndBiasesLogger(PerformanceLogger):
             entity="amoseley018",
             project=projectName,
             config=runConfig,
-            runName=runName
+            name=runName
         )
 
     def LogData(self, data:dict, step:int=None) -> None:
