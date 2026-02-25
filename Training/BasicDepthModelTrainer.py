@@ -1,4 +1,5 @@
 import torch
+import os
 
 from Training.Trainer import Trainer, TrainerInitializationData, CallbackIntervalType, DEFAULT_BATCH_SIZE, DEFAULT_EPOCHS, DEFAULT_LEARN_RATE
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
@@ -13,13 +14,16 @@ DATASET_SCALE_FACTORS = {
     }
 
 class BasicDepthModelTrainer(Trainer):
-    def __init__(self, datasetName:str, device:torch.device, runName:str, validationSetRatio:float=0.1, batchSize:int=DEFAULT_BATCH_SIZE, epochs:int=DEFAULT_EPOCHS, learnRate:float=DEFAULT_LEARN_RATE) -> None:
+    def __init__(self, datasetName:str, device:torch.device, runName:str, checkpointDirectory:str, validationSetRatio:float=0.1, batchSize:int=DEFAULT_BATCH_SIZE, epochs:int=DEFAULT_EPOCHS, learnRate:float=DEFAULT_LEARN_RATE) -> None:
         initializationData = TrainerInitializationData()
 
         scaleFactor = DATASET_SCALE_FACTORS[datasetName]
 
         trainingDataset = DepthPredictionDataset(device, datasetName, scaleFactor=scaleFactor)
         initializationData.trainingDataset = trainingDataset
+
+        self.checkpointDirectory = checkpointDirectory
+        self.runName = runName
 
         validationSetSize = int(len(trainingDataset) * validationSetRatio)
 
@@ -54,6 +58,7 @@ class BasicDepthModelTrainer(Trainer):
         })
 
         self.AddCallback(self.LogEpochLoss, intervalType=CallbackIntervalType.EVERY_N_EPOCHS, interval=1)
+        self.AddCallback(self.SaveModelCheckpoint, intervalType=CallbackIntervalType.EVERY_N_ITERATIONS, interval=20)
 
     def TrainingStep(self, inputData:tuple) -> torch.Tensor:
         inputTensor, gtTensor, validMask = inputData
@@ -86,3 +91,35 @@ class BasicDepthModelTrainer(Trainer):
             "averageTrainingLoss": self.currentAverageTrainingLoss.detach().item(),
             "averageValidationLoss": self.currentAverageValidationLoss.detach().item()
         }, step=self.currentEpoch)
+
+    def SaveModelCheckpoint(self) -> None:
+        onnxModelPath = os.path.join(self.checkpointDirectory, "onnx")
+        os.makedirs(onnxModelPath, exist_ok=True)
+
+        checkpointPath = os.path.join(self.checkpointDirectory, "checkpoints")
+        os.makedirs(checkpointPath, exist_ok=True)
+
+        onnxFileName = f"{self.runName}_e{self.currentEpoch}_i{self.currentTrainingBatchIndex}.onnx"
+        onnxFilePath = os.path.join(onnxModelPath, onnxFileName)
+
+        checkpointFileName = f"{self.runName}_e{self.currentEpoch}_i{self.currentTrainingBatchIndex}.ckpt"
+        checkpointFilePath = os.path.join(checkpointPath, checkpointFileName)
+
+        isModelTraining = self.model.training
+        if isModelTraining:
+            self.model.eval()
+
+        exampleInput = (torch.zeros((1, 3, 256, 256)).to(self.device),)
+        onnxProgram = torch.onnx.export(self.model, exampleInput, dynamo=True, 
+                                     input_names=["input"],
+                                     output_names=["output"],
+                                     dynamic_axes={
+                                         "input": {2: "height", 3: "width"}
+                                     })
+        
+        onnxProgram.save(onnxFilePath)
+
+        torch.save(self.model.state_dict(), checkpointFilePath)
+
+        if isModelTraining:
+            self.model.train()
