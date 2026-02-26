@@ -22,7 +22,7 @@ class BasicDepthModelTrainer(Trainer):
         trainingDataset = DepthPredictionDataset(device, datasetName, scaleFactor=scaleFactor)
         initializationData.trainingDataset = trainingDataset
 
-        self.checkpointDirectory = checkpointDirectory
+        self.checkpointDirectory = os.path.join(checkpointDirectory, runName)
         self.runName = runName
 
         validationSetSize = int(len(trainingDataset) * validationSetRatio)
