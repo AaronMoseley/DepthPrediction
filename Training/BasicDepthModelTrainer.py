@@ -32,7 +32,6 @@ class BasicDepthModelTrainer(Trainer):
         initializationData.validationDataset = validationDataset
 
         model = DepthPredictionModel().to(device)
-        #model = UNetDepthPredictionModel().to(device)
         initializationData.model = model
 
         initializationData.batchSize = batchSize
