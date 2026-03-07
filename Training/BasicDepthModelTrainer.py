@@ -4,7 +4,6 @@ import os
 from Training.Trainer import Trainer, TrainerInitializationData, CallbackIntervalType, DEFAULT_BATCH_SIZE, DEFAULT_EPOCHS, DEFAULT_LEARN_RATE
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
 from Models.BasicDepthPredictionModel import DepthPredictionModel
-from Models.UNetDepthPredictionModel import UNetDepthPredictionModel
 from Utilities.LossFunctions import ScaleInvariantLoss, EdgeAwareSmoothnessLoss, EdgeFocusedScaleInvariantLoss
 from Utilities.WandBPerformanceTracker import WeightsAndBiasesLogger
 
