@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 
 DEFAULT_BATCH_SIZE = 4
-DEFAULT_LEARN_RATE = 0.001
+DEFAULT_LEARN_RATE = 0.0001
 DEFAULT_EPOCHS = 100
 
 class CallbackIntervalType(Enum):
@@ -14,7 +14,7 @@ class TrainerInitializationData():
     def __init__(self) -> None:
         self.trainingDataset = None
         self.validationDataset = None
-
+ 
         self.device = None
 
         self.model = None

@@ -4,7 +4,8 @@ import os
 from Training.Trainer import Trainer, TrainerInitializationData, CallbackIntervalType, DEFAULT_BATCH_SIZE, DEFAULT_EPOCHS, DEFAULT_LEARN_RATE
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
 from Models.BasicDepthPredictionModel import DepthPredictionModel
-from Utilities.LossFunctions import ScaleInvariantLoss
+from Models.UNetDepthPredictionModel import UNetDepthPredictionModel
+from Utilities.LossFunctions import ScaleInvariantLoss, EdgeAwareSmoothnessLoss, EdgeFocusedScaleInvariantLoss
 from Utilities.WandBPerformanceTracker import WeightsAndBiasesLogger
 
 DATASET_SCALE_FACTORS = {
@@ -32,6 +33,7 @@ class BasicDepthModelTrainer(Trainer):
         initializationData.validationDataset = validationDataset
 
         model = DepthPredictionModel().to(device)
+        #model = UNetDepthPredictionModel().to(device)
         initializationData.model = model
 
         initializationData.batchSize = batchSize
@@ -40,7 +42,7 @@ class BasicDepthModelTrainer(Trainer):
 
         initializationData.device = device
 
-        initializationData.lossFunction = ScaleInvariantLoss
+        initializationData.lossFunction = self.LossFunction
         
         initializationData.optimizer = torch.optim.RAdam(model.parameters(), learnRate)
         initializationData.lrScheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(initializationData.optimizer, 10)
@@ -57,26 +59,36 @@ class BasicDepthModelTrainer(Trainer):
             "dataset": datasetName
         })
 
-        self.validationIntervalType = CallbackIntervalType.EVERY_N_ITERATIONS
-        self.validationInterval = 5000
-
         self.AddCallback(self.LogEpochLoss, intervalType=CallbackIntervalType.EVERY_N_EPOCHS, interval=1)
         self.AddCallback(self.SaveModelCheckpoint, intervalType=CallbackIntervalType.EVERY_N_EPOCHS, interval=1)
+
+    def LossFunction(self, inputTensor:torch.Tensor, outputTensor:torch.Tensor, groundTruthTensor:torch.Tensor, validMask:torch.Tensor) -> torch.Tensor:
+        mainLoss = ScaleInvariantLoss(inputTensor, outputTensor, groundTruthTensor, validMask)
+
+        smoothnessLoss = EdgeAwareSmoothnessLoss(inputTensor, outputTensor, groundTruthTensor, validMask)
+
+        edgeFocusedLoss = EdgeFocusedScaleInvariantLoss(inputTensor, outputTensor, groundTruthTensor, validMask)
+
+        totalLoss = (0.9 * mainLoss) + (2.0 * smoothnessLoss) + (0.5 * edgeFocusedLoss)
+
+        return totalLoss
 
     def TrainingStep(self, inputData:tuple) -> torch.Tensor:
         inputTensor, gtTensor, validMask = inputData
 
         outputTensor = self.model(inputTensor)
 
-        loss:torch.Tensor = self.lossFunction(outputTensor, gtTensor, validMask)
+        loss:torch.Tensor = self.lossFunction(inputTensor, outputTensor, gtTensor, validMask)
 
         if self.currentTrainingBatchIndex % self.lossLogInterval == 0:
             self.logger.LogData({
                 "trainingLoss": loss.detach().item()
-            }, step=self.currentTrainingBatchIndex)
+            })
 
         if self.currentTrainingBatchIndex % self.imageLogInterval == 0:
             self.logger.LogImage([inputTensor, gtTensor, validMask, outputTensor], self.currentEpoch, self.currentTrainingBatchIndex)
+
+        self.logger.NextStep()
 
         return loss
 
@@ -85,7 +97,7 @@ class BasicDepthModelTrainer(Trainer):
 
         outputTensor = self.model(inputTensor)
 
-        loss = self.lossFunction(outputTensor, gtTensor, validMask)
+        loss = self.lossFunction(inputTensor, outputTensor, gtTensor, validMask)
 
         return loss
     
@@ -93,7 +105,7 @@ class BasicDepthModelTrainer(Trainer):
         self.logger.LogData({
             "averageTrainingLoss": self.currentAverageTrainingLoss.detach().item(),
             "averageValidationLoss": self.currentAverageValidationLoss.detach().item()
-        }, step=self.currentEpoch)
+        })
 
     def SaveModelCheckpoint(self) -> None:
         onnxModelPath = os.path.join(self.checkpointDirectory, "onnx")
