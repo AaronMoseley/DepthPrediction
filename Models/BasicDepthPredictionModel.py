@@ -10,10 +10,10 @@ class DepthPredictionModel(torch.nn.Module):
 		self.decoder = Decoder(128, torch.nn.ReLU())
 
 	def forward(self, inputTensor:torch.Tensor) -> torch.Tensor:
-		coarseOutput, skip1, skip2 = self.coarseBranch(inputTensor)
-		fineOutput = self.fineBranch(inputTensor, coarseOutput, skip1, skip2)
+		coarseOutput, skip1, skip2, skip3 = self.coarseBranch(inputTensor)
+		fineOutput, fineSkipConnection = self.fineBranch(inputTensor, coarseOutput, skip2, skip3)
 
-		upsampledOutput = self.decoder(fineOutput)
+		upsampledOutput = self.decoder(fineOutput, coarseOutput, fineSkipConnection, skip1)
 
 		return upsampledOutput
 
@@ -24,7 +24,7 @@ class CoarseBranch(torch.nn.Module):
 		self.finalActivation = finalActivation
 		self.inputChannels = inputChannels
 
-		self.pooling = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+		self.pooling = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
 		self.combine1 = torch.nn.Conv2d(64 + 128, 128, kernel_size=1)
 		self.combine2 = torch.nn.Conv2d(64 + 128 + 256, 256, kernel_size=1)
@@ -34,8 +34,6 @@ class CoarseBranch(torch.nn.Module):
 		self.block2 = CoarseBlock(64, 128, False)
 		self.block3 = CoarseBlock(128, 256, False)
 		self.block4 = CoarseBlock(256, 128, True)
-
-		self.finalConv = torch.nn.Conv2d(128, 16, (1, 1))
 
 	def forward(self, inputTensor:torch.Tensor) -> tuple[torch.Tensor]:
 		encode1 = self.block1(inputTensor)
@@ -59,15 +57,13 @@ class CoarseBranch(torch.nn.Module):
 		encode1DownSampled1 = self.pooling(encode1)
 		encode2DownSampled1 = self.pooling(encode2)
 		encode3DownSampled1 = self.pooling(encode3)
-		output = torch.cat([encode1DownSampled1, encode2DownSampled1, encode3DownSampled1, encode4], dim=1)
-		output = self.combine3(output)
-
-		result = self.finalConv(output)
+		result = torch.cat([encode1DownSampled1, encode2DownSampled1, encode3DownSampled1, encode4], dim=1)
+		result = self.combine3(result)
 
 		if self.finalActivation is not None:
 			result = self.finalActivation(result)
 
-		return result, encode3, encode4
+		return result, encode1, encode3, encode4
 
 class FineBranch(torch.nn.Module):
 	def __init__(self, inputChannels:int=3, finalActivation:torch.nn.Module=None) -> None:
@@ -76,14 +72,14 @@ class FineBranch(torch.nn.Module):
 		self.finalActivation = finalActivation
 		self.inputChannels = inputChannels
 
-		self.pooling = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+		self.pooling = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
-		self.combine1 = torch.nn.Conv2d(48 + 128, 128, kernel_size=1)
-		self.combine2 = torch.nn.Conv2d(48 + 128 + 256, 256, kernel_size=1)
-		self.combine3 = torch.nn.Conv2d(48 + 128 + 256 + 128, 128, kernel_size=1)
+		self.combine1 = torch.nn.Conv2d(128 + 128, 128, kernel_size=1)
+		self.combine2 = torch.nn.Conv2d(128 + 128 + 256, 256, kernel_size=1)
+		self.combine3 = torch.nn.Conv2d(128 + 128 + 256 + 128, 128, kernel_size=1)
 
-		self.block1 = FineBlockWide(inputChannels, 48, True)
-		self.block2 = FineBlock(64, 128, False)
+		self.block1 = FineBlockWide(inputChannels, 128, True)
+		self.block2 = FineBlock(256, 128, False)
 		self.block3 = FineBlock(128, 256, False)
 		self.block4 = FineBlock(256, 128, False)
 
@@ -110,7 +106,7 @@ class FineBranch(torch.nn.Module):
 		if self.finalActivation is not None:
 			result = self.finalActivation(result)
 
-		return result
+		return result, concatInput
 
 class CoarseBlock(torch.nn.Module):
 	def __init__(self, inputChannels:int, outputChannels:int, poolResults:bool=True) -> None:
@@ -340,28 +336,41 @@ class Decoder(torch.nn.Module):
 
 		self.kernelSize = 3
 
+		self.combine1 = torch.nn.Conv2d(128 + 128, inputChannels, kernel_size=1)
+		self.combine2 = torch.nn.Conv2d(64 + 256 + 64, inputChannels // 2, kernel_size=1)
+
 		self.upsample = torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+		self.activation = torch.nn.GELU()
 
 		self.conv1 = torch.nn.Conv2d(inputChannels, inputChannels // 2, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), groups=inputChannels // 2)
 		self.norm1 = torch.nn.GroupNorm(1, inputChannels // 2)
-		self.activation1 = torch.nn.GELU()
 
 		self.conv2 = torch.nn.Conv2d(inputChannels // 2, inputChannels // 4, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), groups=inputChannels // 4)
 		self.norm2 = torch.nn.GroupNorm(1, inputChannels // 4)
 
 		self.finalConv = torch.nn.Conv2d(inputChannels // 4, 1, kernel_size=1)
 
-	def forward(self, inputTensor:torch.Tensor) -> torch.Tensor:
-		convolved1 = self.conv1(inputTensor)
-		upsampled1 = self.upsample(convolved1)
-		normed1 = self.norm1(upsampled1)
-		activated1 = self.activation1(normed1)
+	def forward(self, inputTensor:torch.Tensor, coarseOutput:torch.Tensor, fineSkipConnection:torch.Tensor, coarseSkipConnection:torch.Tensor) -> torch.Tensor:
+		inputTensor = torch.cat((inputTensor, coarseOutput), dim=1)
+		inputTensor = self.combine1(inputTensor)
+		
+		upsampled1 = self.upsample(inputTensor)
+		convolved1 = self.conv1(upsampled1)
+		normed1 = self.norm1(convolved1)
+		activated1 = self.activation(normed1)
 
-		convolved2 = self.conv2(activated1)
-		upsampled2 = self.upsample(convolved2)
-		normed2 = self.norm2(upsampled2)
+		resizeShape = (activated1.shape[2], activated1.shape[3])
+		resizedSkipConnection = torch.nn.functional.interpolate(fineSkipConnection, size=resizeShape, mode="bilinear")
 
-		result = self.finalConv(normed2)
+		activated1 = torch.cat((activated1, resizedSkipConnection, coarseSkipConnection), dim=1)
+		activated1 = self.combine2(activated1)
+
+		upsampled2 = self.upsample(activated1)
+		convolved2 = self.conv2(upsampled2)
+		normed2 = self.norm2(convolved2)
+		activated2 = self.activation(normed2)
+
+		result = self.finalConv(activated2)
 
 		if self.finalActivation is not None:
 			result = self.finalActivation(result)
