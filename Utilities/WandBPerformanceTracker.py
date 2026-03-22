@@ -21,11 +21,23 @@ class WeightsAndBiasesLogger(PerformanceLogger):
             name=runName
         )
 
+        self.storedData = {}
+
     def LogData(self, data:dict, step:int=None) -> None:
-        if step is None:
-            self.run.log(data)
-        else:
+        if step is not None:
             self.run.log(data, step=step)
+            return
+        
+        for key in data:
+            self.storedData[key] = data[key]
+
+    def NextStep(self) -> None:
+        if len(self.storedData) == 0:
+            return
+        
+        self.run.log(self.storedData)
+
+        self.storedData = {}
 
     def LogImage(self, tensorList:list[torch.Tensor], epochIndex:int, batchIndex:int) -> None:
         widthSum = 0
