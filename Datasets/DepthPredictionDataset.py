@@ -22,7 +22,9 @@ class DepthPredictionDataset(Dataset):
         self.scaleFactor = scaleFactor
 
         self.depthFiles = os.listdir(self.depthPath)
+        self.depthFiles.sort()
         self.rgbFiles = os.listdir(self.rgbPath)
+        self.rgbFiles.sort()
 
         if indices is not None:
             self.indices = indices

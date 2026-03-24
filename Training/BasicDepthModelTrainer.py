@@ -68,7 +68,7 @@ class BasicDepthModelTrainer(Trainer):
 
         edgeFocusedLoss = EdgeFocusedScaleInvariantLoss(inputTensor, outputTensor, groundTruthTensor, validMask)
 
-        totalLoss = (0.9 * mainLoss) + (2.0 * smoothnessLoss) + (0.5 * edgeFocusedLoss)
+        totalLoss = (1.5 * mainLoss) + (1.0 * smoothnessLoss) + (1.0 * edgeFocusedLoss)
 
         return totalLoss
 
@@ -85,7 +85,7 @@ class BasicDepthModelTrainer(Trainer):
             })
 
         if self.currentTrainingBatchIndex % self.imageLogInterval == 0:
-            self.logger.LogImage([inputTensor, gtTensor, validMask, outputTensor], self.currentEpoch, self.currentTrainingBatchIndex)
+            self.logger.LogImage([inputTensor, gtTensor, validMask, outputTensor], [False, False, False, True], self.currentEpoch, self.currentTrainingBatchIndex)
 
         self.logger.NextStep()
 

@@ -7,7 +7,7 @@ class PerformanceLogger():
     def LogData(self, data:dict, step:int=None) -> None:
         return None
     
-    def LogImage(self, tensorList:list[torch.Tensor], epochIndex:int, batchIndex:int) -> None:
+    def LogImage(self, tensorList:list[torch.Tensor], isDepth:list[bool], epochIndex:int, batchIndex:int) -> None:
         return None
     
     def FinishRun(self) -> None:

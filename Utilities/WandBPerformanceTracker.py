@@ -39,18 +39,25 @@ class WeightsAndBiasesLogger(PerformanceLogger):
 
         self.storedData = {}
 
-    def LogImage(self, tensorList:list[torch.Tensor], epochIndex:int, batchIndex:int) -> None:
+    def LogImage(self, tensorList:list[torch.Tensor], isDepth:list[bool], epochIndex:int, batchIndex:int) -> None:
         widthSum = 0
         maxHeight = 0
         batchSize = 0
         
         #convert image tensor to numpy array
         arrayList:list[np.ndarray] = []
-        for tensor in tensorList:
+        for i, tensor in enumerate(tensorList):
             newArray = tensor.detach().cpu().numpy()
 
-            newArray /= max(np.max(newArray), 1.0)
-            newArray *= 255.0
+            if isDepth[i] == True:
+                newArray -= np.min(newArray)
+                newArray = np.exp(newArray)
+                newArray /= np.max(newArray)
+                newArray *= 255.0
+            else:
+                newArray /= np.max(newArray)
+                newArray *= 255.0
+
             newArray = np.asarray(newArray, dtype=np.uint8)
 
             currentBatchSize, channels, currentHeight, currentWidth = newArray.shape

@@ -5,7 +5,7 @@ class DepthPredictionModel(torch.nn.Module):
 	def __init__(self) -> None:
 		super().__init__()
 
-		self.coarseBranch = CoarseBranch(3, torch.nn.Sigmoid())
+		self.coarseBranch = CoarseBranch(3, torch.nn.LeakyReLU())
 		self.fineBranch = FineBranch(3, torch.nn.Sigmoid())
 		self.decoder = Decoder(128, torch.nn.ReLU())
 
@@ -72,7 +72,7 @@ class FineBranch(torch.nn.Module):
 		self.finalActivation = finalActivation
 		self.inputChannels = inputChannels
 
-		self.pooling = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+		self.pooling = torch.nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
 
 		self.combine1 = torch.nn.Conv2d(128 + 128, 128, kernel_size=1)
 		self.combine2 = torch.nn.Conv2d(128 + 128 + 256, 256, kernel_size=1)
@@ -118,19 +118,19 @@ class CoarseBlock(torch.nn.Module):
 
 		self.kernelSize = 3
 
-		self.activation = torch.nn.GELU()
+		self.activation = torch.nn.LeakyReLU()
 
 		#convolution
-		self.conv1 = torch.nn.Conv2d(inputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=min(inputChannels, outputChannels))
+		self.conv1 = torch.nn.Conv2d(inputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=min(inputChannels, outputChannels))
 		self.spade1 = SPADEBlock(outputChannels)
 
 		#convolution
-		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=outputChannels)
+		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=outputChannels)
 		self.spade2 = SPADEBlock(outputChannels)
 
 		self.combine1 = torch.nn.Conv2d(outputChannels * 2, outputChannels, kernel_size=1)
 
-		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=outputChannels)
+		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=outputChannels)
 		self.spade3 = SPADEBlock(outputChannels)
 
 		self.combine2 = torch.nn.Conv2d(outputChannels * 3, outputChannels, kernel_size=1)
@@ -175,23 +175,23 @@ class CoarseBlockWide(torch.nn.Module):
 
 		intermediateChannels = inputChannels * 16
 
-		self.activation = torch.nn.GELU()
+		self.activation = torch.nn.LeakyReLU()
 
 		#convolution
 		self.wideKernelH = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.wideKernelSize, 1), groups=inputChannels)
 		self.wideKernelV = torch.nn.Conv2d(inputChannels, intermediateChannels, (1, self.wideKernelSize), groups=inputChannels)
-		self.centeredConv = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=inputChannels)
+		self.centeredConv = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=inputChannels)
 		self.mixer = torch.nn.Conv2d(intermediateChannels * 3, outputChannels, kernel_size=1)
 
 		self.spade1 = SPADEBlock(outputChannels)
 
 		#convolution
-		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=outputChannels)
+		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=outputChannels)
 		self.spade2 = SPADEBlock(outputChannels)
 
 		self.combine1 = torch.nn.Conv2d(outputChannels * 2, outputChannels, kernel_size=1)
 
-		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), groups=outputChannels)
+		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=outputChannels)
 		self.spade3 = SPADEBlock(outputChannels)
 
 		self.combine2 = torch.nn.Conv2d(outputChannels * 3, outputChannels, kernel_size=1)
@@ -245,21 +245,21 @@ class FineBlockWide(torch.nn.Module):
 
 		intermediateChannels = self.inputChannels * 16
 
-		self.activation = torch.nn.GELU()
+		self.activation = torch.nn.Sigmoid()
 
 		#convolution
 		self.wideKernelH = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.wideKernelSize, 1), groups=inputChannels, stride=2)
 		self.wideKernelV = torch.nn.Conv2d(inputChannels, intermediateChannels, (1, self.wideKernelSize), groups=inputChannels, stride=2)
-		self.centeredConv = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=inputChannels, stride=2)
+		self.centeredConv = torch.nn.Conv2d(inputChannels, intermediateChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=inputChannels, stride=2)
 		self.mixer = torch.nn.Conv2d(intermediateChannels * 3, outputChannels, kernel_size=1)
 
 		#convolution
-		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=outputChannels)
+		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=outputChannels)
 
-		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=outputChannels)
+		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=outputChannels)
 
 		#max pool?
-		self.maxPool = torch.nn.MaxPool2d((2, 2))
+		self.maxPool = torch.nn.AvgPool2d((2, 2))
 
 	def forward(self, rgbTensor:torch.Tensor) -> torch.Tensor:
 		padV = torch.nn.functional.pad(rgbTensor, (4, 4, 0, 0), mode="reflect")
@@ -297,18 +297,18 @@ class FineBlock(torch.nn.Module):
 
 		self.kernelSize = 5
 
-		self.activation = torch.nn.GELU()
+		self.activation = torch.nn.Sigmoid()
 
 		#convolution
-		self.conv1 = torch.nn.Conv2d(inputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=min(inputChannels, outputChannels))
+		self.conv1 = torch.nn.Conv2d(inputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=min(inputChannels, outputChannels))
 
 		#convolution
-		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=outputChannels)
+		self.conv2 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=outputChannels)
 
-		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), groups=outputChannels)
+		self.conv3 = torch.nn.Conv2d(outputChannels, outputChannels, (self.kernelSize, self.kernelSize), padding=(2, 2), padding_mode="replicate", groups=outputChannels)
 
 		#max pool?
-		self.maxPool = torch.nn.MaxPool2d((2, 2))
+		self.maxPool = torch.nn.AvgPool2d((2, 2))
 
 	def forward(self, inputTensor:torch.Tensor) -> torch.Tensor:
 		convolved1 = self.conv1(inputTensor)
@@ -336,23 +336,21 @@ class Decoder(torch.nn.Module):
 
 		self.kernelSize = 3
 
-		self.combine1 = torch.nn.Conv2d(128 + 128, inputChannels, kernel_size=1)
-		self.combine2 = torch.nn.Conv2d(64 + 256 + 64, inputChannels // 2, kernel_size=1)
+		self.downsampleChannel = torch.nn.Conv2d(256, 64, kernel_size=1)
 
 		self.upsample = torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
-		self.activation = torch.nn.GELU()
+		self.activation = torch.nn.Sigmoid()
 
-		self.conv1 = torch.nn.Conv2d(inputChannels, inputChannels // 2, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), groups=inputChannels // 2)
+		self.conv1 = torch.nn.Conv2d(inputChannels, inputChannels // 2, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=inputChannels // 2)
 		self.norm1 = torch.nn.GroupNorm(1, inputChannels // 2)
 
-		self.conv2 = torch.nn.Conv2d(inputChannels // 2, inputChannels // 4, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), groups=inputChannels // 4)
+		self.conv2 = torch.nn.Conv2d(inputChannels // 2, inputChannels // 4, kernel_size=(self.kernelSize, self.kernelSize), padding=(1, 1), padding_mode="replicate", groups=inputChannels // 4)
 		self.norm2 = torch.nn.GroupNorm(1, inputChannels // 4)
 
 		self.finalConv = torch.nn.Conv2d(inputChannels // 4, 1, kernel_size=1)
 
 	def forward(self, inputTensor:torch.Tensor, coarseOutput:torch.Tensor, fineSkipConnection:torch.Tensor, coarseSkipConnection:torch.Tensor) -> torch.Tensor:
-		inputTensor = torch.cat((inputTensor, coarseOutput), dim=1)
-		inputTensor = self.combine1(inputTensor)
+		inputTensor = inputTensor + coarseOutput
 		
 		upsampled1 = self.upsample(inputTensor)
 		convolved1 = self.conv1(upsampled1)
@@ -361,9 +359,9 @@ class Decoder(torch.nn.Module):
 
 		resizeShape = (activated1.shape[2], activated1.shape[3])
 		resizedSkipConnection = torch.nn.functional.interpolate(fineSkipConnection, size=resizeShape, mode="bilinear")
+		resizedSkipConnection = self.downsampleChannel(resizedSkipConnection)
 
-		activated1 = torch.cat((activated1, resizedSkipConnection, coarseSkipConnection), dim=1)
-		activated1 = self.combine2(activated1)
+		activated1 = activated1 + resizedSkipConnection + coarseSkipConnection
 
 		upsampled2 = self.upsample(activated1)
 		convolved2 = self.conv2(upsampled2)
