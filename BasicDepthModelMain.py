@@ -15,5 +15,5 @@ if __name__ == "__main__":
     if validationSetRatio in argManager:
         validationSetRatio = argManager.validationSetRatio
 
-    trainer = BasicDepthModelTrainer(argManager.dataset, device, "RevisedDepthModel-2", "modelFiles", validationSetRatio, batchSize=1)
+    trainer = BasicDepthModelTrainer(argManager.dataset, device, "CleanedUpModel", "modelFiles", validationSetRatio, batchSize=1)
     trainer.TrainingLoop()
