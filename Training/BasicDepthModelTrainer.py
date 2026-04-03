@@ -89,11 +89,6 @@ class BasicDepthModelTrainer(Trainer):
 
         self.logger.NextStep()
 
-        inputData = None
-        inputTensor = None
-        gtTensor = None
-        validMask = None
-
         return loss
 
     def ValidationStep(self, validationBatchIndex:int, inputData:tuple) -> torch.Tensor:
@@ -102,11 +97,6 @@ class BasicDepthModelTrainer(Trainer):
         outputTensor = self.model(inputTensor)
 
         loss = self.lossFunction(inputTensor, outputTensor, gtTensor, validMask)
-
-        inputData = None
-        inputTensor = None
-        gtTensor = None
-        validMask = None
 
         return loss
     
