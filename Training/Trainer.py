@@ -48,9 +48,9 @@ class Trainer():
         self.validationIntervalType:CallbackIntervalType = CallbackIntervalType.EVERY_N_EPOCHS
         self.validationInterval:int = 1
 
-        self.currentAverageValidationLoss = torch.tensor(0).to(self.device)
-        self.currentAverageTrainingLoss = torch.tensor(0).to(self.device)
-        self.currentTrainingLoss = torch.tensor(0).to(self.device)
+        self.currentAverageValidationLoss = 0.0
+        self.currentAverageTrainingLoss = 0.0
+        self.currentTrainingLoss = 0.0
 
         self.currentEpoch = 0
         self.currentTrainingBatchIndex = 0
@@ -92,18 +92,20 @@ class Trainer():
                 print(f"Starting epoch {epochIndex}")
 
             #loss = 0 for recording per-epoch loss
-            trainingLoss = torch.tensor(0.0).to(self.device)
+            trainingLoss = 0.0
             #loop through training batches
             for batchIndex, inputData in tqdm(enumerate(self.trainingLoader), total=trainBatchCount):
                 self.currentTrainingBatchIndex = batchIndex + (trainBatchCount * epochIndex)
 
                 self.optimizer.zero_grad()
                 
-                self.currentTrainingLoss:torch.Tensor = self.TrainingStep(inputData)
+                currentLoss:torch.Tensor = self.TrainingStep(inputData)
 
                 #apply loss
-                self.currentTrainingLoss.backward()
+                currentLoss.backward()
                 self.optimizer.step()
+
+                self.currentTrainingLoss = currentLoss.detach().item()
 
                 #step scheduler if needed
                 self.lrScheduler.step(epochIndex + (batchIndex / trainBatchCount))
@@ -132,7 +134,7 @@ class Trainer():
                 if callbackObject["intervalType"] == CallbackIntervalType.EVERY_N_EPOCHS and (epochIndex + 1) % callbackObject["interval"] == 0:
                     callbackObject["function"]()
 
-    def ValidationLoop(self) -> torch.Tensor:
+    def ValidationLoop(self) -> float:
         validationBatchCount = len(self.validationLoader)
         
         torch.set_grad_enabled(False)
@@ -141,19 +143,19 @@ class Trainer():
         self.model.eval()
 
         #validation loss = 0 for recording
-        validationLoss = torch.tensor(0.0).to(self.device)
+        validationLoss = 0.0
         #loop through validation batches
         for batchIndex, inputData in tqdm(enumerate(self.validationLoader), total=validationBatchCount):
             loss:torch.Tensor = self.ValidationStep(batchIndex, inputData)
 
             #add to total
-            validationLoss += loss
+            validationLoss += loss.detach().item()
 
         #report epoch index and train/validation loss
         averageValidationLoss = validationLoss / validationBatchCount
 
         if self.enableDebugLogging:
-            print(f"Epoch {self.currentEpoch}, Iteration {self.currentTrainingBatchIndex}:\n\tValidation Loss: {averageValidationLoss.detach().item()}\n")
+            print(f"Epoch {self.currentEpoch}, Iteration {self.currentTrainingBatchIndex}:\n\tValidation Loss: {averageValidationLoss}\n")
 
         torch.set_grad_enabled(True)
 

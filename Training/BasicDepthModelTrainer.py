@@ -112,8 +112,8 @@ class BasicDepthModelTrainer(Trainer):
     
     def LogEpochLoss(self) -> None:
         self.logger.LogData({
-            "averageTrainingLoss": self.currentAverageTrainingLoss.detach().item(),
-            "averageValidationLoss": self.currentAverageValidationLoss.detach().item()
+            "averageTrainingLoss": self.currentAverageTrainingLoss,
+            "averageValidationLoss": self.currentAverageValidationLoss
         })
 
     def SaveModelCheckpoint(self) -> None:
