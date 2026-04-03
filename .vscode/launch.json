@@ -13,7 +13,10 @@
             "args": [
                 "--modelType=standard",
                 "--dataset=NYU"
-            ]
+            ],
+            "env": {
+                "MALLOC_ARENA_MAX": "2"
+            }
         },
         {
             "name": "Python Debugger: Current File",

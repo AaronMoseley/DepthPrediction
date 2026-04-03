@@ -1,6 +1,7 @@
 from enum import Enum
 import torch
 from tqdm import tqdm
+import gc
 
 DEFAULT_BATCH_SIZE = 4
 DEFAULT_LEARN_RATE = 0.0001
@@ -115,6 +116,9 @@ class Trainer():
                 for callbackObject in self.callbacks:
                     if callbackObject["intervalType"] == CallbackIntervalType.EVERY_N_ITERATIONS and (self.currentTrainingBatchIndex + 1) % callbackObject["interval"] == 0:
                         callbackObject["function"]()
+
+                gc.collect()
+                torch.cuda.empty_cache()
 
             self.currentAverageTrainingLoss = trainingLoss / trainBatchCount
 

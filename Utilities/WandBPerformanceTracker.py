@@ -24,12 +24,12 @@ class WeightsAndBiasesLogger(PerformanceLogger):
         self.storedData = {}
 
     def LogData(self, data:dict, step:int=None) -> None:
-        if step is not None:
-            self.run.log(data, step=step)
-            return
+        #if step is not None:
+        self.run.log(data, step=step, commit=True)
+        #    return
         
-        for key in data:
-            self.storedData[key] = data[key]
+        #for key in data:
+        #    self.storedData[key] = data[key]
 
     def NextStep(self) -> None:
         if len(self.storedData) == 0:
@@ -93,7 +93,7 @@ class WeightsAndBiasesLogger(PerformanceLogger):
         finalImage = wandb.Image(stackedArray, caption=f"Epoch: {epochIndex}, Batch: {batchIndex}")
         self.run.log({
             "images": [finalImage]
-        })
+        }, commit=True)
 
     def FinishRun(self) -> None:
         self.run.finish()

@@ -68,7 +68,7 @@ class BasicDepthModelTrainer(Trainer):
 
         edgeFocusedLoss = EdgeFocusedScaleInvariantLoss(inputTensor, outputTensor, groundTruthTensor, validMask)
 
-        totalLoss = (1.5 * mainLoss) + (1.0 * smoothnessLoss) + (1.0 * edgeFocusedLoss)
+        totalLoss = (0.9 * mainLoss) + (2.0 * smoothnessLoss) + (0.5 * edgeFocusedLoss)
 
         return totalLoss
 
@@ -89,6 +89,11 @@ class BasicDepthModelTrainer(Trainer):
 
         self.logger.NextStep()
 
+        inputData = None
+        inputTensor = None
+        gtTensor = None
+        validMask = None
+
         return loss
 
     def ValidationStep(self, validationBatchIndex:int, inputData:tuple) -> torch.Tensor:
@@ -97,6 +102,11 @@ class BasicDepthModelTrainer(Trainer):
         outputTensor = self.model(inputTensor)
 
         loss = self.lossFunction(inputTensor, outputTensor, gtTensor, validMask)
+
+        inputData = None
+        inputTensor = None
+        gtTensor = None
+        validMask = None
 
         return loss
     
