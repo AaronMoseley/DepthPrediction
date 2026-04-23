@@ -2,7 +2,7 @@ import sys
 from Utilities.ArgumentManager import ArgumentManager
 import torch
 
-from Training.BasicDepthModelTrainer import BasicDepthModelTrainer
+from Training.DepthModelTrainer import DepthModelTrainer
 
 if __name__ == "__main__":
     print("training model")
@@ -15,5 +15,5 @@ if __name__ == "__main__":
     if validationSetRatio in argManager:
         validationSetRatio = argManager.validationSetRatio
 
-    trainer = BasicDepthModelTrainer(argManager.dataset, device, "FlippedCoarseAndFine", "modelFiles", validationSetRatio, batchSize=1)
+    trainer = DepthModelTrainer(argManager.dataset, device, "FlippedCoarseAndFine", "modelFiles", validationSetRatio, batchSize=1)
     trainer.TrainingLoop()

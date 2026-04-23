@@ -3,7 +3,7 @@ import os
 
 from Training.Trainer import Trainer, TrainerInitializationData, CallbackIntervalType, DEFAULT_BATCH_SIZE, DEFAULT_EPOCHS, DEFAULT_LEARN_RATE
 from Datasets.DepthPredictionDataset import DepthPredictionDataset
-from Models.BasicDepthPredictionModel import DepthPredictionModel
+from Models.DepthPredictionModel import DepthPredictionModel
 from Utilities.LossFunctions import ScaleInvariantLoss, EdgeAwareSmoothnessLoss, EdgeFocusedScaleInvariantLoss
 from Utilities.WandBPerformanceTracker import WeightsAndBiasesLogger
 
@@ -13,7 +13,7 @@ DATASET_SCALE_FACTORS = {
         "MegaDepth": 1.0
     }
 
-class BasicDepthModelTrainer(Trainer):
+class DepthModelTrainer(Trainer):
     def __init__(self, datasetName:str, device:torch.device, runName:str, checkpointDirectory:str, validationSetRatio:float=0.1, batchSize:int=DEFAULT_BATCH_SIZE, epochs:int=DEFAULT_EPOCHS, learnRate:float=DEFAULT_LEARN_RATE) -> None:
         initializationData = TrainerInitializationData()
 
