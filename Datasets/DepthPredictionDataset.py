@@ -6,10 +6,12 @@ import os
 import random
 
 class DepthPredictionDataset(Dataset):
-    def __init__(self, device:torch.device, datasetName:str, indices:list[int]=None, scaleFactor:float=1.0) -> None:
+    def __init__(self, device:torch.device, datasetName:str, indices:list[int]=None, scaleFactor:float=1.0, maximumImageDimension:int=768) -> None:
         super().__init__()
 
         random.seed(12345)
+
+        self.maximumDimension = maximumImageDimension
 
         self.device = device
         self.datasetName = datasetName
@@ -48,8 +50,30 @@ class DepthPredictionDataset(Dataset):
 
         return rgbTensor, depthTensor, validDataMask
 
+    def CropTensorToMaximumSize(self, inputTensor:torch.Tensor) -> torch.Tensor:
+        C, H, W = inputTensor.shape
+
+        # Determine final crop size (don’t exceed original)
+        cropH = min(H, self.maximumDimension)
+        cropW = min(W, self.maximumDimension)
+
+        if cropH % 16 != 0:
+            cropH = (cropH // 16) * 16
+
+        if cropW % 16 != 0:
+            cropW = (cropW // 16) * 16
+
+        # Compute top-left corner for centered crop
+        top = (H - cropH) // 2
+        left = (W - cropW) // 2
+
+        # Crop
+        return inputTensor[:, top:top + cropH, left:left + cropW]
+
     def CreateDataTensor(self, filePath:str, readMode:torchvision.io.ImageReadMode, scaleFactor:float=1.0) -> torch.Tensor:
         resultTensor = torchvision.io.read_image(filePath, readMode).to(self.device).float()
+
+        resultTensor = self.CropTensorToMaximumSize(resultTensor)
 
         resultTensor /= scaleFactor
 

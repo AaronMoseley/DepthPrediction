@@ -5,6 +5,34 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Train KITTI Model",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "DepthModelMain",
+            "console": "integratedTerminal",
+            "args": [
+                "--modelType=standard",
+                "--dataset=KITTI"
+            ],
+            "env": {
+                "MALLOC_ARENA_MAX": "2"
+            }
+        },
+        {
+            "name": "Train MegaDepth Model",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "DepthModelMain",
+            "console": "integratedTerminal",
+            "args": [
+                "--modelType=standard",
+                "--dataset=MegaDepth"
+            ],
+            "env": {
+                "MALLOC_ARENA_MAX": "2"
+            }
+        },
+        {
             "name": "Train NYU Model",
             "type": "debugpy",
             "request": "launch",
