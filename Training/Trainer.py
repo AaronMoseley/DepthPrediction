@@ -125,7 +125,7 @@ class Trainer():
             self.currentAverageTrainingLoss = trainingLoss / trainBatchCount
 
             if self.enableDebugLogging:
-                print(f"Epoch {epochIndex}:\n\tTraining Loss: {self.currentAverageTrainingLoss.detach().item()}\n")
+                print(f"Epoch {epochIndex}:\n\tTraining Loss: {self.currentAverageTrainingLoss}\n")
 
             if self.validationIntervalType == CallbackIntervalType.EVERY_N_EPOCHS and (epochIndex + 1) % self.validationInterval == 0:
                 self.currentAverageValidationLoss = self.ValidationLoop()
